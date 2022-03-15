@@ -1,0 +1,61 @@
+{
+
+ "debug": {
+
+  "db_host": "",
+
+  "db_name": "",
+
+  "db_user": "",
+
+  "db_password": ""
+
+ }
+
+}
+
+class DbConf{
+
+ public static function Conf( $conf_name ){
+
+   
+
+  if(empty($conf_name)){
+
+   die("Illegal parameter");
+
+  }
+
+ 
+
+  $from = "localhost"; // allow legal host only
+
+  if(!isset($_SERVER['HTTP_HOST']) || $_SERVER['HTTP_HOST']!=$from){
+
+   die("Unauthorized access");
+
+  }
+
+ 
+
+  $json_config = file_get_contents('db-config.json');
+
+ 
+
+  $json_data = json_decode($json_config, true);
+
+ 
+
+  if( array_key_exists($conf_name, $json_data)){
+
+   return $json_data[$conf_name];
+
+  }else{
+
+   return "Not Found";
+
+  }
+
+ }
+
+}

@@ -1,0 +1,102 @@
+<?php
+       /* 用 PDO_SQLSRV 链接 SQL server . */
+      $serverName = "YourServerName";
+      $database = "DatabaseName";
+      //从文件中读取用户名和密码.
+      $uid = file_get_contents("..\uid.txt");
+      $pwd = file_get_contents("..\pwd.txt");
+      try{
+          $conn = new PDO( "sqlsrv:server=$serverName;Database = $database",$uid,$pwd);
+          $conn->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+      }
+        catch(PDOException $e){
+        die("Error connection to SQL Server");
+    }
+ //每次只需要读出一个最新的数据
+    $query = "select top 1 rzTime,rzValue from rz order by rzTime DESC";
+    $stmt = $conn->query($query);
+    $row = $stmt->fetch();
+    $rzTime = strtotime($row['rzTime']);
+    
+    $rzH = strftime('%H',$rzTime);
+    $rzM = strftime('%M',$rzTime);
+    $rzS = strftime('%S',$rzTime);
+    $rzmonth = strftime('%m',$rzTime);
+    $rzD = strftime('%d',$rzTime);
+    $rzY = strftime('%Y',$rzTime);
+    //将时间转换为时间戳
+    $jsonArray = array(mktime($rzH,$rzM,$rzS,$rzmonth,$rzD,$rzY)*10000,round($row['rzValue'],3));
+ 
+    $stmt->closeCursor();
+    $stmt = null;
+    $conn = null;
+ 
+    //文件输出为设置为 JSON
+    header('Content-type: text/json');
+    echo json_encode($jsonArray);
+?>
+<script type="text/javascript" src="../Charts/js/jquery-1.7.2.min.js"></script>
+    <script src="../Charts/js/highcharts.js"></script>
+    <script src="../Charts/js/modules/exporting.js"></script>
+function requestData(){
+                $.ajax({
+                    url: 'chartData.php',
+                    success: function(point){
+                        var series = chart.series[0],
+                            shift = series.data.length > 20; // 图中显示20个数据点
+                       
+                        chart.series[0].addPoint(eval(point),true,shift);
+                        setTimeout(requestData,10000); //每10秒调用一次
+                    },
+                    cache: false
+                });
+            }
+$(document).ready(function(){
+              chart = new Highcharts.Chart({
+                    chart: {
+                        renderTo: 'container',
+                        defaultSeriesType: 'spline',
+                        events: {
+                            load: requestData
+                        }
+                    },
+                    title:{
+                        text: '实时数据',
+                        x:-20
+                    },
+                    xAxis: {
+                        type: 'datetime',
+                        tickPixelInterval: 150,
+                        maxZoom: 20 * 1000
+ 
+                    },
+                    yAxis: {
+                        minPadding: 0.2,
+                        maxPadding: 0.2,
+                        title: {
+                            text: '数值',
+                            margin: 80
+                        }
+                    },
+                    tooltip: {
+                        formatter: function(){
+ 
+                            return Highcharts.dateFormat('%Y-%m-%d %H:%M:%S', this.x) + '数值是：' + this.y;
+                        }
+                    },
+                    //本来下面是版权信息，我将它改成下载浏览器了，因为这个在XP下IE7，8无法运行
+                    credits:{
+                        enabled:true,
+                        text:'XP系统请点击这里下载浏览器',
+                        href:'../../谷歌浏览器 XP版.exe',
+                        style:{
+                            color:'#FF0000',
+                            fontSize:'14px'
+                        }
+                    },
+                    series: [{
+                        name: 'XXX值',
+                        data: []
+                    }]
+                });
+            });
